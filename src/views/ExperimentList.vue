@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { experimentsApi } from '../api'
+import { useExperiments } from '../composables'
 import type { Experiment } from '../api'
 
 const router = useRouter()
-
-const experiments = ref<Experiment[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const { experiments, loading, error, fetchExperiments, retry } = useExperiments()
 
 const statusColors: Record<Experiment['status'], string> = {
   draft: 'status-draft',
@@ -33,24 +30,12 @@ function formatDate(dateStr?: string) {
   })
 }
 
-async function fetchExperiments() {
-  loading.value = true
-  error.value = null
-  try {
-    experiments.value = await experimentsApi.getAll()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load experiments'
-  } finally {
-    loading.value = false
-  }
-}
-
-function retry() {
-  fetchExperiments()
-}
-
 function navigateToCreate() {
   router.push('/experiments/create')
+}
+
+function navigateToExperiment(id: string) {
+  router.push(`/experiments/${id}`)
 }
 
 onMounted(() => {
@@ -87,7 +72,16 @@ onMounted(() => {
     </div>
 
     <ul v-else class="experiment-grid">
-      <li v-for="experiment in experiments" :key="experiment.id" class="experiment-card">
+      <li
+        v-for="experiment in experiments"
+        :key="experiment.id"
+        class="experiment-card"
+        role="button"
+        tabindex="0"
+        @click="navigateToExperiment(experiment.id)"
+        @keydown.enter="navigateToExperiment(experiment.id)"
+        @keydown.space.prevent="navigateToExperiment(experiment.id)"
+      >
         <div class="card-header">
           <h2 class="experiment-name">{{ experiment.name }}</h2>
           <span
@@ -291,6 +285,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  cursor: pointer;
   transition:
     border-color 0.2s,
     background 0.2s;
