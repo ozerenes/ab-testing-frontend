@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { experimentsApi, assignmentsApi } from '../api'
+import { experimentsApi, assignmentsApi, eventsApi } from '../api'
 import type { Experiment, ExperimentStats, Assignment } from '../api'
 
 const route = useRoute()
@@ -16,6 +16,12 @@ const assignment = ref<Assignment | null>(null)
 const currentUserId = ref<string | null>(null)
 const assignLoading = ref(false)
 const assignError = ref<string | null>(null)
+
+const eventVariantKey = ref<string>('')
+const eventUserId = ref<string>('')
+const eventLoading = ref(false)
+const eventError = ref<string | null>(null)
+const eventSuccess = ref<string | null>(null)
 
 const experimentId = computed(() => String(route.params.id))
 
@@ -84,6 +90,8 @@ async function simulateUserAssignment() {
   try {
     const result = await assignmentsApi.assign(experimentId.value, userId)
     assignment.value = result
+    eventVariantKey.value = result.variantKey
+    eventUserId.value = userId
   } catch (err) {
     assignError.value = err instanceof Error ? err.message : 'Failed to assign variant'
   } finally {
@@ -91,7 +99,41 @@ async function simulateUserAssignment() {
   }
 }
 
+async function trackEvent(eventType: 'view' | 'click' | 'conversion') {
+  if (!experimentId.value || !eventVariantKey.value) {
+    eventError.value = 'Select a variant first'
+    return
+  }
+  eventLoading.value = true
+  eventError.value = null
+  eventSuccess.value = null
+  try {
+    await eventsApi.track({
+      experimentId: experimentId.value,
+      variantKey: eventVariantKey.value,
+      eventType,
+      userId: eventUserId.value || undefined,
+    })
+    eventSuccess.value = `Tracked ${eventType}`
+    await fetchExperiment()
+  } catch (err) {
+    eventError.value = err instanceof Error ? err.message : `Failed to track ${eventType}`
+  } finally {
+    eventLoading.value = false
+  }
+}
+
 watch(experimentId, fetchExperiment, { immediate: false })
+watch(
+  () => experiment.value?.variants,
+  (variants) => {
+    if (variants?.length && !eventVariantKey.value) {
+      const first = variants[0]
+      eventVariantKey.value = first.key ?? first.name ?? ''
+    }
+  },
+  { immediate: true }
+)
 onMounted(fetchExperiment)
 </script>
 
@@ -162,6 +204,71 @@ onMounted(fetchExperiment)
           <span class="result-label">Assigned variant:</span>
           <strong class="result-variant">{{ assignment.variantKey }}</strong>
         </div>
+      </section>
+
+      <section class="events-section">
+        <h2 class="section-title">Trigger events</h2>
+        <p class="section-desc">
+          Track view, click, or conversion for a variant. Use the assigned user above or pick variant and optional userId.
+        </p>
+        <div class="events-form">
+          <div class="form-row">
+            <label for="event-variant" class="form-label">Variant</label>
+            <select
+              id="event-variant"
+              v-model="eventVariantKey"
+              class="form-select"
+              :disabled="!experiment.variants?.length"
+            >
+              <option value="">Select variant</option>
+              <option
+                v-for="v in experiment.variants"
+                :key="getVariantKey(v)"
+                :value="getVariantKey(v)"
+              >
+                {{ getVariantKey(v) }}
+              </option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="event-user" class="form-label">User ID (optional)</label>
+            <input
+              id="event-user"
+              v-model="eventUserId"
+              type="text"
+              class="form-input"
+              placeholder="user-xxx"
+            />
+          </div>
+          <div class="event-buttons">
+            <button
+              type="button"
+              class="btn-event btn-view"
+              :disabled="eventLoading || !eventVariantKey"
+              @click="trackEvent('view')"
+            >
+              View
+            </button>
+            <button
+              type="button"
+              class="btn-event btn-click"
+              :disabled="eventLoading || !eventVariantKey"
+              @click="trackEvent('click')"
+            >
+              Click
+            </button>
+            <button
+              type="button"
+              class="btn-event btn-conversion"
+              :disabled="eventLoading || !eventVariantKey"
+              @click="trackEvent('conversion')"
+            >
+              Conversion
+            </button>
+          </div>
+        </div>
+        <div v-if="eventError" class="event-error">{{ eventError }}</div>
+        <div v-else-if="eventSuccess" class="event-success">{{ eventSuccess }}</div>
       </section>
 
       <section class="variants-section">
@@ -429,6 +536,109 @@ onMounted(fetchExperiment)
   color: #81c784;
 }
 
+.events-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.events-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.events-form .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.events-form .form-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-muted, rgba(255, 255, 255, 0.7));
+}
+
+.events-form .form-select,
+.events-form .form-input {
+  max-width: 280px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+}
+
+.events-form .form-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.event-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.btn-event {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-event:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-view {
+  background: #64b5f6;
+}
+
+.btn-view:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-click {
+  background: #ffb74d;
+  color: #1a1a1a;
+}
+
+.btn-click:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-conversion {
+  background: #81c784;
+  color: #1a1a1a;
+}
+
+.btn-conversion:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.event-error {
+  font-size: 0.9rem;
+  color: #ff6b6b;
+  margin-top: 0.5rem;
+}
+
+.event-success {
+  font-size: 0.9rem;
+  color: #81c784;
+  margin-top: 0.5rem;
+}
+
 .variants-section {
   margin-bottom: 2rem;
 }
@@ -519,9 +729,24 @@ onMounted(fetchExperiment)
     color: #213547;
   }
 
-  .assignment-section {
+  .assignment-section,
+  .events-section {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .events-form .form-select,
+  .events-form .form-input {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .events-form .form-input::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+  }
+
+  .event-success {
+    color: #2e7d32;
   }
 
   .section-desc {
