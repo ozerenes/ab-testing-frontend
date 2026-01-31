@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { experimentsApi } from '../api'
-import type { Experiment, ExperimentStats } from '../api'
+import { experimentsApi, assignmentsApi } from '../api'
+import type { Experiment, ExperimentStats, Assignment } from '../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,6 +11,11 @@ const experiment = ref<Experiment | null>(null)
 const stats = ref<ExperimentStats | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const assignment = ref<Assignment | null>(null)
+const currentUserId = ref<string | null>(null)
+const assignLoading = ref(false)
+const assignError = ref<string | null>(null)
 
 const experimentId = computed(() => String(route.params.id))
 
@@ -63,6 +68,29 @@ function navigateBack() {
   router.push('/')
 }
 
+function generateRandomUserId(): string {
+  const prefix = 'user-'
+  const suffix = Math.random().toString(36).slice(2, 10)
+  return `${prefix}${suffix}`
+}
+
+async function simulateUserAssignment() {
+  if (!experimentId.value || !experiment.value?.variants?.length) return
+  assignLoading.value = true
+  assignError.value = null
+  assignment.value = null
+  const userId = generateRandomUserId()
+  currentUserId.value = userId
+  try {
+    const result = await assignmentsApi.assign(experimentId.value, userId)
+    assignment.value = result
+  } catch (err) {
+    assignError.value = err instanceof Error ? err.message : 'Failed to assign variant'
+  } finally {
+    assignLoading.value = false
+  }
+}
+
 watch(experimentId, fetchExperiment, { immediate: false })
 onMounted(fetchExperiment)
 </script>
@@ -109,6 +137,30 @@ onMounted(fetchExperiment)
             <span class="meta-label">End</span>
             {{ formatDate(experiment.endDate) }}
           </span>
+        </div>
+      </section>
+
+      <section class="assignment-section">
+        <h2 class="section-title">User assignment simulation</h2>
+        <p class="section-desc">
+          Generate a random userId and assign a variant (deterministic: same user always gets same variant).
+        </p>
+        <div class="assignment-actions">
+          <button
+            type="button"
+            class="btn-simulate"
+            :disabled="assignLoading || !experiment.variants?.length"
+            @click="simulateUserAssignment"
+          >
+            {{ assignLoading ? 'Assigning…' : 'Generate random user & assign variant' }}
+          </button>
+        </div>
+        <div v-if="assignError" class="assign-error">{{ assignError }}</div>
+        <div v-else-if="assignment" class="assignment-result">
+          <span class="result-label">User:</span>
+          <code class="result-user">{{ currentUserId }}</code>
+          <span class="result-label">Assigned variant:</span>
+          <strong class="result-variant">{{ assignment.variantKey }}</strong>
         </div>
       </section>
 
@@ -302,9 +354,79 @@ onMounted(fetchExperiment)
 }
 
 .section-title {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.section-desc {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: var(--color-muted, rgba(255, 255, 255, 0.6));
+  line-height: 1.5;
+}
+
+.assignment-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.assignment-actions {
+  margin-bottom: 1rem;
+}
+
+.btn-simulate {
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: white;
+  background: #646cff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-simulate:hover:not(:disabled) {
+  background: #535bf2;
+}
+
+.btn-simulate:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.assign-error {
+  font-size: 0.9rem;
+  color: #ff6b6b;
+  margin-bottom: 0.5rem;
+}
+
+.assignment-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: var(--color-muted, rgba(255, 255, 255, 0.8));
+}
+
+.result-label {
+  font-weight: 500;
+}
+
+.result-user {
+  padding: 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.result-variant {
+  color: #81c784;
 }
 
 .variants-section {
@@ -395,6 +517,27 @@ onMounted(fetchExperiment)
 
   .experiment-name {
     color: #213547;
+  }
+
+  .assignment-section {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .section-desc {
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  .assignment-result {
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  .result-user {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  .result-variant {
+    color: #2e7d32;
   }
 
   .variant-card {
