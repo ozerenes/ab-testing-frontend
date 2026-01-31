@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { experimentsApi } from '../api'
+import { useExperiments } from '../composables'
 import type { Experiment } from '../api'
 
 const router = useRouter()
-
-const experiments = ref<Experiment[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const { experiments, loading, error, fetchExperiments, retry } = useExperiments()
 
 const statusColors: Record<Experiment['status'], string> = {
   draft: 'status-draft',
@@ -31,22 +28,6 @@ function formatDate(dateStr?: string) {
     month: 'short',
     day: 'numeric',
   })
-}
-
-async function fetchExperiments() {
-  loading.value = true
-  error.value = null
-  try {
-    experiments.value = await experimentsApi.getAll()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load experiments'
-  } finally {
-    loading.value = false
-  }
-}
-
-function retry() {
-  fetchExperiments()
 }
 
 function navigateToCreate() {

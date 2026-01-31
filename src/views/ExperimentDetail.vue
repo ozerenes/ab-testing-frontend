@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { experimentsApi, assignmentsApi, eventsApi } from '../api'
-import type { Experiment, ExperimentStats, Assignment } from '../api'
+import { assignmentsApi, eventsApi } from '../api'
+import { useExperimentDetail } from '../composables'
+import type { Experiment, Assignment } from '../api'
 
 const route = useRoute()
 const router = useRouter()
-
-const experiment = ref<Experiment | null>(null)
-const stats = ref<ExperimentStats | null>(null)
-const loading = ref(true)
-const error = ref<string | null>(null)
+const experimentId = computed(() => String(route.params.id))
+const { experiment, stats, loading, error, fetchExperiment } = useExperimentDetail(experimentId)
 
 const assignment = ref<Assignment | null>(null)
 const currentUserId = ref<string | null>(null)
@@ -22,8 +20,6 @@ const eventUserId = ref<string>('')
 const eventLoading = ref(false)
 const eventError = ref<string | null>(null)
 const eventSuccess = ref<string | null>(null)
-
-const experimentId = computed(() => String(route.params.id))
 
 const statusColors: Record<Experiment['status'], string> = {
   draft: 'status-draft',
@@ -46,24 +42,6 @@ function formatDate(dateStr?: string) {
     month: 'short',
     day: 'numeric',
   })
-}
-
-async function fetchExperiment() {
-  if (!experimentId.value) return
-  loading.value = true
-  error.value = null
-  try {
-    const [exp, st] = await Promise.all([
-      experimentsApi.getById(experimentId.value),
-      experimentsApi.getStats(experimentId.value),
-    ])
-    experiment.value = exp
-    stats.value = st
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load experiment'
-  } finally {
-    loading.value = false
-  }
 }
 
 function getVariantKey(v: { key?: string; name?: string }) {
@@ -123,7 +101,6 @@ async function trackEvent(eventType: 'view' | 'click' | 'conversion') {
   }
 }
 
-watch(experimentId, fetchExperiment, { immediate: false })
 watch(
   () => experiment.value?.variants,
   (variants) => {
