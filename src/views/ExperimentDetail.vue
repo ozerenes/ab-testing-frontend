@@ -293,6 +293,23 @@ onMounted(fetchExperiment)
           <span class="metric">Conversions: {{ stats.totals.conversions }}</span>
           <span class="metric">Conversion rate: {{ stats.totals.conversionRate }}%</span>
         </div>
+        <div class="conversion-chart">
+          <h3 class="chart-title">Conversion rate by variant</h3>
+          <div
+            v-for="v in stats.variants"
+            :key="v.variantKey"
+            class="chart-row"
+          >
+            <span class="chart-label">{{ v.variantKey }}</span>
+            <div class="chart-bar-wrap" role="presentation" aria-hidden="true">
+              <div
+                class="chart-bar"
+                :style="{ width: Math.min(v.conversionRate, 100) + '%' }"
+              />
+            </div>
+            <span class="chart-value">{{ v.conversionRate }}%</span>
+          </div>
+        </div>
         <div class="variant-metrics">
           <div
             v-for="v in stats.variants"
@@ -681,9 +698,67 @@ onMounted(fetchExperiment)
   display: flex;
   flex-wrap: wrap;
   gap: 1rem 1.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   font-size: 0.9rem;
   color: var(--color-muted, rgba(255, 255, 255, 0.8));
+}
+
+.conversion-chart {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chart-title {
+  margin: 0 0 1rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-muted, rgba(255, 255, 255, 0.85));
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.chart-row:last-child {
+  margin-bottom: 0;
+}
+
+.chart-label {
+  flex: 0 0 100px;
+  min-width: 0;
+  font-weight: 500;
+  color: var(--color-muted, rgba(255, 255, 255, 0.9));
+}
+
+.chart-bar-wrap {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chart-bar {
+  height: 100%;
+  min-width: 2px;
+  background: linear-gradient(90deg, #646cff, #81c784);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.chart-value {
+  flex: 0 0 3.5em;
+  text-align: right;
+  font-weight: 600;
+  color: #81c784;
 }
 
 .metric {
@@ -768,6 +843,27 @@ onMounted(fetchExperiment)
   .variant-card {
     background: rgba(0, 0, 0, 0.03);
     border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .conversion-chart {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .chart-title {
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  .chart-label {
+    color: rgba(0, 0, 0, 0.75);
+  }
+
+  .chart-bar-wrap {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  .chart-value {
+    color: #2e7d32;
   }
 
   .totals-row,
