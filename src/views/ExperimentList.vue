@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { experimentsApi } from '../api'
 import type { Experiment } from '../api'
+
+const router = useRouter()
 
 const experiments = ref<Experiment[]>([])
 const loading = ref(true)
@@ -46,6 +49,10 @@ function retry() {
   fetchExperiments()
 }
 
+function navigateToCreate() {
+  router.push('/experiments/create')
+}
+
 onMounted(() => {
   fetchExperiments()
 })
@@ -54,8 +61,13 @@ onMounted(() => {
 <template>
   <div class="experiment-list">
     <header class="page-header">
-      <h1>Experiments</h1>
-      <p class="subtitle">Manage your A/B tests and experiments</p>
+      <div class="header-content">
+        <div>
+          <h1>Experiments</h1>
+          <p class="subtitle">Manage your A/B tests and experiments</p>
+        </div>
+        <button type="button" class="btn-create" @click="navigateToCreate">+ New Experiment</button>
+      </div>
     </header>
 
     <div v-if="loading" class="loading-state">
@@ -125,6 +137,20 @@ onMounted(() => {
   }
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .header-content {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+}
+
 .page-header h1 {
   margin: 0 0 0.25rem 0;
   font-size: 1.5rem;
@@ -145,6 +171,31 @@ onMounted(() => {
 
 @media (min-width: 640px) {
   .subtitle {
+    font-size: 0.95rem;
+  }
+}
+
+.btn-create {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: white;
+  background: #646cff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-create:hover {
+  background: #535bf2;
+}
+
+@media (min-width: 640px) {
+  .btn-create {
+    padding: 0.75rem 1.5rem;
     font-size: 0.95rem;
   }
 }

@@ -1,6 +1,7 @@
 // Experiment types
 export interface ExperimentVariant {
   id: string
+  key?: string
   name: string
   weight?: number
   config?: Record<string, unknown>
@@ -18,10 +19,16 @@ export interface Experiment {
   updatedAt: string
 }
 
+export interface CreateExperimentVariantPayload {
+  key: string
+  name: string
+  weight?: number
+}
+
 export interface CreateExperimentPayload {
   name: string
   description?: string
-  variants: Omit<ExperimentVariant, 'id'>[]
+  variants: CreateExperimentVariantPayload[]
   startDate?: string
   endDate?: string
 }

@@ -9,6 +9,12 @@ const router = createRouter({
       component: () => import('../views/ExperimentList.vue'),
       meta: { title: 'Experiments' },
     },
+    {
+      path: '/experiments/create',
+      name: 'experiment-create',
+      component: () => import('../views/ExperimentCreate.vue'),
+      meta: { title: 'Create Experiment' },
+    },
   ],
 })
 
