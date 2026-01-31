@@ -1,5 +1,10 @@
 import { apiClient } from './client'
-import type { Experiment, CreateExperimentPayload, UpdateExperimentPayload } from './types'
+import type {
+  Experiment,
+  CreateExperimentPayload,
+  UpdateExperimentPayload,
+  ExperimentStats,
+} from './types'
 
 const ENDPOINT = '/experiments'
 
@@ -22,5 +27,9 @@ export const experimentsApi = {
 
   delete(id: string): Promise<void> {
     return apiClient.delete(`${ENDPOINT}/${id}`).then(() => undefined)
+  },
+
+  getStats(id: string): Promise<ExperimentStats> {
+    return apiClient.get(`${ENDPOINT}/${id}/stats`).then((res) => res.data.data ?? res.data)
   },
 }

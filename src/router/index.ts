@@ -10,6 +10,12 @@ const router = createRouter({
       meta: { title: 'Experiments' },
     },
     {
+      path: '/experiments/:id',
+      name: 'experiment-detail',
+      component: () => import('../views/ExperimentDetail.vue'),
+      meta: { title: 'Experiment Detail' },
+    },
+    {
       path: '/experiments/create',
       name: 'experiment-create',
       component: () => import('../views/ExperimentCreate.vue'),

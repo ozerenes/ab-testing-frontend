@@ -53,6 +53,10 @@ function navigateToCreate() {
   router.push('/experiments/create')
 }
 
+function navigateToExperiment(id: string) {
+  router.push(`/experiments/${id}`)
+}
+
 onMounted(() => {
   fetchExperiments()
 })
@@ -87,7 +91,16 @@ onMounted(() => {
     </div>
 
     <ul v-else class="experiment-grid">
-      <li v-for="experiment in experiments" :key="experiment.id" class="experiment-card">
+      <li
+        v-for="experiment in experiments"
+        :key="experiment.id"
+        class="experiment-card"
+        role="button"
+        tabindex="0"
+        @click="navigateToExperiment(experiment.id)"
+        @keydown.enter="navigateToExperiment(experiment.id)"
+        @keydown.space.prevent="navigateToExperiment(experiment.id)"
+      >
         <div class="card-header">
           <h2 class="experiment-name">{{ experiment.name }}</h2>
           <span
@@ -291,6 +304,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
+  cursor: pointer;
   transition:
     border-color 0.2s,
     background 0.2s;

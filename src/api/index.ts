@@ -1,4 +1,5 @@
 export { apiClient } from './client'
 export { experimentsApi } from './experiments'
 export { eventsApi } from './events'
+export { assignmentsApi } from './assignments'
 export type * from './types'
